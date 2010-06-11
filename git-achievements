@@ -76,7 +76,7 @@ function unlock_achievement()
     if [ $? -eq 0 ] ; then
         return
     fi
-    output_achievement "$@"
+    output_achievement "$@" >&2
     output_achievement "$@" >> "${ACHIEVEMENTSLOGFILE}"
 
     if [ "`git config --global achievement.upload`" = "true" ] ; then
@@ -343,7 +343,14 @@ function publish_achievements
     git_achievements="$(which git-achievements)"
     git_achievements_dir="$(dirname "${git_achievements}")"
     if [ -L "${git_achievements}" ]; then
-      git_achievements_dir="${git_achievements_dir}/$(dirname $(readlink ${git_achievements}))"
+      case "$(dirname $(readlink ${git_achievements}))" in
+        /*)
+          git_achievements_dir="$(dirname $(readlink ${git_achievements}))"
+          ;;
+        *)
+          git_achievements_dir="${git_achievements_dir}/$(dirname $(readlink ${git_achievements}))"
+          ;;
+      esac
     fi
 
     cd "${git_achievements_dir}"
@@ -447,10 +454,12 @@ There are $total Achievements. Some achievements can be leveled up depending on 
 
     abortcount=`git status | grep 'Changes to be committed' | wc -l`
     if [ ! $abortcount -eq 0 ] ; then
+        echo "There are staged changes in the repository, updates let uncommitted"
         return
     fi
 
     if [ ! "`git config --global achievement.upload`" = "true" ] ; then
+        echo "Global achievement.upload not set to true, updates left uncommited"
         return
     fi
 
